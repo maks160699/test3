@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Для тебя ✨</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:italic,wght@400;700&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --pink-bg: #fdf2f2;
+            --accent-pink: #e5b3b3;
+            --text-dark: #6b5b5b;
+        }
+
+        /* Убираем лаги: упрощаем фон */
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--pink-bg);
+            font-family: 'Montserrat', sans-serif;
+            color: var(--text-dark);
+            min-height: 100vh;
+            /* Разрешаем скролл для мобильных */
+            overflow-y: auto; 
+            overflow-x: hidden;
+        }
+
+        #petal-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Центрируем конверт */
+        .wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        .envelope-wrapper {
+            position: relative;
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        .envelope {
+            width: 260px;
+            height: 170px;
+            background: #f8dada;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .envelope-flap {
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 0;
+            border-left: 130px solid transparent;
+            border-right: 130px solid transparent;
+            border-top: 90px solid #e5b3b3;
+            transform-origin: top;
+            z-index: 3;
+        }
+
+        /* Карточка: теперь она может скроллиться */
+        .container {
+            width: 90%;
+            max-width: 400px;
+            margin: 40px auto; /* Отступы сверху и снизу */
+            display: none; /* Скрыта изначально */
+            position: relative;
+            z-index: 10;
+        }
+
+        .letter-card {
+            background: rgba(255, 255, 255, 0.95); /* Убрали blur для скорости */
+            padding: 20px;
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(229, 179, 179, 0.3);
+            text-align: center;
+            border: 1px solid #ffffff;
+        }
+
+        .main-img {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        h1 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin: 10px 0; }
+        
+        .typewriter-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: left; /* Текст на мобильных лучше читается слева или по центру */
+            padding: 0 10px;
+        }
+
+        .btn-reply {
+            display: inline-block;
+            background: var(--accent-pink);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            margin: 10px 0 20px 0;
+            transition: 0.3s;
+        }
+
+        .music-btn {
+            position: fixed;
+            bottom: 20px; right: 20px;
+            background: white;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 0.7rem;
+            z-index: 1000;
+            border: 1px solid var(--accent-pink);
+            color: var(--accent-pink);
+        }
+
+        /* Адаптивность для совсем маленьких экранов */
+        @media (max-height: 600px) {
+            .main-img { max-height: 200px; }
+            h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="petal-canvas"></canvas>
+
+    <button class="music-btn" id="mBtn" onclick="toggleMusic()">🎵 Музыка</button>
+    <audio id="bgMusic" loop playsinline>
+        <source src="madrugada.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="wrapper" id="envContainer">
+        <div class="envelope-wrapper" onclick="openLetter()">
+            <div class="envelope">
+                <div class="envelope-flap" id="flap"></div>
+            </div>
+            <p style="text-align:center; font-style:italic; margin-top:15px; color:#e5b3b3;">Нажми, чтобы открыть ✨</p>
+        </div>
+    </div>
+
+    <div class="container" id="mainCard">
+        <div class="letter-card">
+            <img src="https://i.pinimg.com/1200x/2c/b5/b3/2cb5b3aafd0fa5e8321b598a3ef37bd7.jpg" class="main-img">
+            <h1>С 8 Марта ✨</h1>
+            <div id="textTarget" class="typewriter-text"></div>
+            <a href="https://t.me/max_tttttt" class="btn-reply" id="replyBtn" style="display:none;">Сказать спасибо</a>
+        </div>
+    </div>
+
+    <script>
+        const audio = document.getElementById('bgMusic');
+        const mBtn = document.getElementById('mBtn');
+        const mainCard = document.getElementById('mainCard');
+        const envContainer = document.getElementById('envContainer');
+        const textTarget = document.getElementById('textTarget');
+        const fullText = "Я хотел, чтобы этот день начался для тебя с чего-то красивого. Пусть в твоей душе всегда цветет весна, а каждый миг будет наполнен такой же нежностью, как эти лепестки. Ты удивительная.";
+        
+        let isOpened = false;
+
+        function toggleMusic() {
+            if (audio.paused) { 
+                audio.play(); 
+                mBtn.innerHTML = "⏸ Пауза";
+            } else { 
+                audio.pause(); 
+                mBtn.innerHTML = "🎵 Музыка";
+            }
+        }
+
+        function openLetter() {
+            if(isOpened) return;
+            isOpened = true;
+
+            audio.play().catch(() => {});
+            
+            // Анимация конверта
+            gsap.to("#flap", { rotationX: 180, duration: 0.5 });
+            gsap.to(envContainer, { 
+                display: "none", 
+                duration: 0.5, 
+                delay: 0.5,
+                onComplete: () => {
+                    mainCard.style.display = "block";
+                    gsap.from(mainCard, { opacity: 0, y: 50, duration: 0.8 });
+                    typeWriter();
+                }
+            });
+        }
+
+        function typeWriter() {
+            let i = 0;
+            textTarget.innerHTML = "";
+            function type() {
+                if (i < fullText.length) {
+                    textTarget.innerHTML += fullText.charAt(i);
+                    i++;
+                    setTimeout(type, 35);
+                } else {
+                    document.getElementById('replyBtn').style.display = "inline-block";
+                }
+            }
+            type();
+        }
+
+        // --- УПРОЩЕННЫЕ ЛЕПЕСТКИ ДЛЯ СКОРОСТИ ---
+        const canvas = document.getElementById('petal-canvas');
+        const ctx = canvas.getContext('2d');
+        let petals = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Petal {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = 5 + Math.random() * 5;
+                this.speedY = 1 + Math.random() * 1;
+                this.speedX = -0.5 + Math.random() * 0.5;
+            }
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX;
+                if (this.y > canvas.height) {
+                    this.y = -10;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+            draw() {
+                ctx.fillStyle = "rgba(229, 179, 179, 0.5)";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Уменьшили количество лепестков до 20 для плавности
+        for (let i = 0; i < 20; i++) petals.push(new Petal());
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for(let p of petals) {
+                p.update();
+                p.draw();
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
